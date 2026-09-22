@@ -5,6 +5,7 @@ Wants=network-online.target
 
 [Container]
 Image=ghcr.io/bdeschut/pq-strongswan:latest
+AutoUpdate=registry
 ContainerName=ipsec-vpn
 
 # Host networking and raw net privileges are mandatory for host routing

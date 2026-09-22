@@ -32,14 +32,7 @@ podman exec -it ipsec-vpn swanctl --initiate --child paloalto-tunnel
 ```
 
 # Building the container(s) (multi-arch support via [[REBUILD.md](REBUILD.md)])
-```bash
-podman build \
-    --build-arg STRONGSWAN_VERSION=6.1.0 \
-    --build-arg LIBOQS_VERSION=0.16.0 \
-    -t pq-strongswan:latest \
-    -t pq-strongswan:6.1.0-0.16.0 \
-    -f Dockerfile .
-```
+
 
 # Test
 

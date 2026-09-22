@@ -27,7 +27,12 @@ ARCH=$(podman info --format '{{.Host.Arch}}')
 git pull
 
 # Build the image locally
-podman build -t ${IMAGE_NAME}:latest .
+podman build \
+    --build-arg STRONGSWAN_VERSION=6.1.0 \
+    --build-arg LIBOQS_VERSION=0.16.0 \
+    -t pq-strongswan:latest \
+    -t pq-strongswan:6.1.0-0.16.0 \
+    -f Dockerfile .
 
 # Tag with the architecture suffix
 podman tag ${IMAGE_NAME}:latest ${REGISTRY}/${IMAGE_NAME}:${VERSION}-${ARCH}
