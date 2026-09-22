@@ -5,6 +5,7 @@ FROM debian:trixie-slim AS builder
 
 ARG STRONGSWAN_VERSION=6.1.0
 ARG LIBOQS_VERSION=0.16.0
+ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -16,7 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     pkg-config
 
-# 1. Build and install liboqs 0.16.0 (FIPS 203 ML-KEM)
+# 1. Build liboqs with OQS_DIST_BUILD=ON (portable across Pi 4 and Pi 5)
 WORKDIR /tmp/liboqs
 RUN curl -sSL https://github.com/open-quantum-safe/liboqs/archive/refs/tags/${LIBOQS_VERSION}.tar.gz | tar -xz --strip-components=1 \
     && mkdir build && cd build \
@@ -24,11 +25,13 @@ RUN curl -sSL https://github.com/open-quantum-safe/liboqs/archive/refs/tags/${LI
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DCMAKE_BUILD_TYPE=Release \
         -DBUILD_SHARED_LIBS=ON \
+        -DOQS_DIST_BUILD=ON \
         -DOQS_USE_OPENSSL=ON \
         -DOQS_BUILD_ONLY_LIB=ON .. \
-    && ninja install
+    && ninja install \
+    && DESTDIR=/install ninja install
 
-# 2. Build strongSwan 6.1.0 with OQS & modern swanctl/VICI
+# 2. Build strongSwan with OQS & install into /install staging tree
 WORKDIR /tmp/strongswan
 RUN curl -sSL https://download.strongswan.org/strongswan-${STRONGSWAN_VERSION}.tar.bz2 | tar -xj --strip-components=1 \
     && ./configure \
@@ -55,6 +58,8 @@ RUN curl -sSL https://download.strongswan.org/strongswan-${STRONGSWAN_VERSION}.t
 # ==========================================
 FROM debian:trixie-slim
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     iproute2 \
     iptables \
@@ -62,12 +67,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl3 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy liboqs shared libraries from builder
-COPY --from=builder /usr/lib/liboqs.so* /usr/lib/
-
-# Copy installed strongSwan binaries and plugins from staged DESTDIR
+# Copy everything staged (both liboqs and strongSwan) cleanly
 COPY --from=builder /install/usr /usr
 COPY --from=builder /install/etc /etc
+
+# Update the dynamic linker cache
+RUN ldconfig
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
