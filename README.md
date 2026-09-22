@@ -9,6 +9,9 @@ sudo chmod 0600 /opt/strongswan/strongswan.conf
 sudo vi /etc/containers/systemd/ipsec.container # See example systemd file
 sudo podman pull ghcr.io/bdeschut/pq-strongswan:latest
 
+# Optional, if you want containers to auto update
+sudo systemctl enable --now podman-auto-update.timer
+
 # sudo modprobe af_key xfrm_user xfrm_algo esp4 # First one didn't seem loaded on "clean" system
 # = not needed
 

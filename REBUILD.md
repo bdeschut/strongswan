@@ -102,7 +102,12 @@ podman manifest inspect ${REGISTRY}/${IMAGE_NAME}:${VERSION}
 ```
 Verify that manifests contains both amd64 and arm64.
 
-Test Pulling on each machine:
+### Trigger automatic updates manually
+```bash
+sudo podman auto-update
+```
+
+### Manual test Pulling on each machine:
 ```bash
 podman pull ${REGISTRY}/${IMAGE_NAME}:${VERSION}
 podman image inspect ${REGISTRY}/${IMAGE_NAME}:${VERSION} --format 'Architecture: {{.Architecture}}'
