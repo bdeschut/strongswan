@@ -1,11 +1,15 @@
 #!/bin/sh
 set -e
 
+# If arguments were passed to 'podman run', execute them directly (e.g. bash, sh)
+if [ "$#" -gt 0 ]; then
+    exec "$@"
+fi
+
 echo "[+] Starting strongSwan charon daemon..."
 /usr/libexec/ipsec/charon &
 CHARON_PID=$!
 
-# Wait for VICI IPC socket to become available
 MAX_RETRIES=20
 COUNT=0
 while [ ! -S /var/run/charon.vici ]; do
@@ -18,9 +22,7 @@ while [ ! -S /var/run/charon.vici ]; do
 done
 
 echo "[+] charon started. Loading swanctl configuration..."
-swanctl --load-all || echo "[!] Notice: swanctl --load-all returned warnings."
+swanctl --load-all || true
 
-# Trap termination signals to gracefully stop charon
 trap "kill -TERM $CHARON_PID" INT TERM
-
 wait $CHARON_PID

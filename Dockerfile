@@ -52,7 +52,9 @@ RUN curl -sSL https://download.strongswan.org/strongswan-${STRONGSWAN_VERSION}.t
         --enable-cmd \
     && make -j$(nproc) \
     && make install DESTDIR=/install
-
+    # --- PRUNE UNNEEDED HEADERS AND STRIP SYMBOLS ---
+    # && rm -rf /install/usr/include /install/usr/share/man /install/usr/share/doc \
+    # && find /install/usr -type f \( -name "*.so*" -o -perm /111 \) -exec strip --strip-unneeded {} + 2>/dev/null || true
 # ==========================================
 # Stage 2: Clean Runtime Image (Zero Devtools)
 # ==========================================
@@ -63,6 +65,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     iproute2 \
     iptables \
+    iputils-ping \
     ca-certificates \
     libssl3 \
     && rm -rf /var/lib/apt/lists/*
