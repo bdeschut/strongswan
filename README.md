@@ -12,15 +12,14 @@ sudo vi /etc/containers/systemd/ipsec.container # See example systemd file
 sudo vi /etc/systemd/system/ipsec-interface.service # See example systemd file
 sudo podman pull ghcr.io/bdeschut/pq-strongswan:latest
 
-# Optional, if you want containers to auto update
-sudo systemctl enable --now podman-auto-update.timer
-
 # sudo modprobe af_key xfrm_user xfrm_algo esp4 # First one didn't seem loaded on "clean" system
 # = not needed
 
 sudo sysctl -w net.ipv4.ip_forward=1
 
 sudo systemctl daemon-reload
+# Optional, if you want containers to auto update
+sudo systemctl enable --now podman-auto-update.timer
 sudo systemctl enable --now ipsec-interface.service
 sudo systemctl start ipsec
 
