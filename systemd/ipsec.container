@@ -24,20 +24,5 @@ Volume=/lib/modules:/lib/modules:ro
 #HealthTimeout=5s
 #HealthOnFailure=restart
 
-[Service]
-# Clean up any stale interface if left behind
-ExecStartPre=-/usr/sbin/ip link del ipsec0
-# Create the xfrm interface bound to ID 42
-ExecStartPre=/usr/sbin/ip link add ipsec0 type xfrm if_id 42
-# Assign tunnel IP and bring up
-ExecStartPre=/usr/sbin/ip addr add changeme_IP_SPOKE/30 peer changeme_IP_HUB dev ipsec0
-ExecStartPre=/usr/sbin/ip link set ipsec0 up
-# Route home subnets across the tunnel (replace 10.0.0.0/16 with your home subnets)
-ExecStartPre=-/usr/sbin/ip route replace changeme_HUB_NET dev ipsec0
-# Clean up interface when stopped
-ExecStopPost=-/usr/sbin/ip link del ipsec0
-Restart=always
-RestartSec=15s
-
 [Install]
 WantedBy=multi-user.target
