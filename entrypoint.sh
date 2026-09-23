@@ -1,7 +1,6 @@
 #!/bin/sh
 set -e
 
-# If arguments were passed to 'podman run', execute them directly (e.g. bash, sh)
 if [ "$#" -gt 0 ]; then
     exec "$@"
 fi
@@ -10,19 +9,26 @@ echo "[+] Starting strongSwan charon daemon..."
 /usr/libexec/ipsec/charon &
 CHARON_PID=$!
 
-MAX_RETRIES=20
+# Trap signals immediately to ensure clean IKE_DELETE on shutdown
+trap 'echo "[+] Stopping charon..."; kill -TERM "$CHARON_PID"; wait "$CHARON_PID"' INT TERM
+
+# Allow up to 15 seconds for socket creation on slower Pi storage
+MAX_RETRIES=75
 COUNT=0
 while [ ! -S /var/run/charon.vici ]; do
     sleep 0.2
     COUNT=$((COUNT + 1))
     if [ "$COUNT" -ge "$MAX_RETRIES" ]; then
         echo "[!] Timeout waiting for /var/run/charon.vici"
+        kill -KILL "$CHARON_PID" 2>/dev/null || true
         exit 1
     fi
 done
 
-echo "[+] charon started. Loading swanctl configuration..."
-swanctl --load-all || true
+echo "[+] charon ready. Loading swanctl configuration..."
+if ! swanctl --load-all; then
+    echo "[!] Warning: swanctl --load-all encountered errors during initial boot."
+fi
 
-trap "kill -TERM $CHARON_PID" INT TERM
-wait $CHARON_PID
+# Wait for Charon to exit
+wait "$CHARON_PID"
