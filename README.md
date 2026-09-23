@@ -35,8 +35,18 @@ podman exec -it ipsec-vpn swanctl --load-all
 podman exec -it ipsec-vpn swanctl --initiate --child paloalto-tunnel
 ```
 
-# Building the container(s) (multi-arch support via [[REBUILD.md](REBUILD.md)])
+```bash
+# Terminate any established SA
+podman exec -it ipsec-vpn swanctl --terminate --ike paloalto-hub
 
+# Verify SA table is completely empty
+podman exec -it ipsec-vpn swanctl --list-sas
+
+# Send a ping to the Palo Alto tunnel IP to trigger the trap
+ping -c 3 changeme_HUB_VPN_IP
+```
+
+# Building the container(s) (multi-arch support via [[REBUILD.md](REBUILD.md)])
 
 # Test
 
