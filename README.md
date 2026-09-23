@@ -6,7 +6,10 @@ sudo mkdir /opt/strongswan
 sudo chmod 0700 /opt/strongswan
 sudo vi /opt/strongswan/strongswan.conf # See example config file in this repo (strongswan.conf)
 sudo chmod 0600 /opt/strongswan/strongswan.conf
+sudo vi /opt/strongswan/swanctl.conf # See example config file in this repo (swanctl.conf)
+sudo chmod 0600 /opt/strongswan/swanctl.conf
 sudo vi /etc/containers/systemd/ipsec.container # See example systemd file
+sudo vi /etc/systemd/system/ipsec-interface.service # See example systemd file
 sudo podman pull ghcr.io/bdeschut/pq-strongswan:latest
 
 # Optional, if you want containers to auto update
