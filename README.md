@@ -27,7 +27,7 @@ sudo systemctl start ipsec
 # Troubleshooting
 ```bash
 # Check healthcheck status:
-podman inspect --format '{{.State.Health.Status}}' ipsec-vpn
+podman inspect --format '{{.State.Health.Status}} (FailingStreak: {{.State.Health.FailingStreak}})' ipsec-vpn
 ```
 
 ```bash
