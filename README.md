@@ -68,3 +68,20 @@ podman exec -it ipsec-spoke swanctl --initiate --child ...
 # Pushing to ghcr
 
 See [[REBUILD.md](REBUILD.md)] for multi-arch build and push procedure.
+
+# Post Quantum crypto
+
+The Two Types of Post-Quantum IPsec:
+
+| Feature |	Type 1: Post-Quantum Pre-Shared Key (PPK) |	Type 2: Post-Quantum Key Exchange (PQ KEM) |
+| --- | --- |  --- | 
+| Standard	| RFC 8784 (What you are using) |	RFC 9370 / RFC 9242 |
+| How it works |	Uses standard classical DH (like ecp384), then injects a static out-of-band secret (PPK) into the symmetric Key Derivation Function (SKEYSEED).	| Swaps or supplements DH over the wire with lattice algorithms (e.g., ML-KEM-768 / Kyber). |
+| Required library |	Standard OpenSSL (kdf plugin). Built into strongSwan core. |	liboqs (via strongSwan oqs plugin). |
+| Palo Alto PAN-OS Support	| Full Support (PAN-OS "Post-Quantum" checkbox).	| Not Supported by PAN-OS. |
+
+## Why Your Setup Worked Without liboqs: ##
+
+When PAN-OS asks for "Post-Quantum = Required", it strictly demands an RFC 8784 PPK.
+Because symmetric encryption (AES-256) and hashing (SHA-384) are already quantum-resistant (Grover’s algorithm only cuts symmetric key space by half, leaving 256-bit keys with 128 bits of true post-quantum security), RFC 8784 neutralizes the "harvest now, decrypt later" threat using standard symmetric math.
+StrongSwan has supported RFC 8784 natively in its core code since version 5.8.3. It does not touch liboqs for this.
