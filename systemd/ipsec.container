@@ -19,12 +19,13 @@ Volume=/opt/strongswan/strongswan.conf:/etc/strongswan.conf:ro,Z
 Volume=/opt/strongswan/swanctl.conf:/etc/swanctl/swanctl.conf:ro,Z
 Volume=/lib/modules:/lib/modules:ro
 
-# Optional healthcheck using the peer tunnel IP
-HealthCmd=ping -I ipsec0 -c 1 -W 3 changeme_VPNIP_HUB || exit 1
+# Let strongSwan handle link failure: StrongSwan's dpd_action = restart automatically sends keepalives and attempts background reconnection without killing the daemon process.
+# Container healthcheck monitors the VICI socket: The healthcheck only verifies that Charon is responsive and has not deadlocked or crashed.
+HealthCmd=swanctl --stats >/dev/null 2>&1 || exit 1
 HealthInterval=30s
 HealthRetries=3
 HealthTimeout=5s
-HealthStartPeriod=10s
+HealthStartPeriod=15s
 HealthOnFailure=restart
 
 [Service]
