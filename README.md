@@ -30,6 +30,7 @@ iptables -t mangle -A FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-m
 ```bash
 podman exec -it ipsec-vpn ip xfrm state
 podman exec -it ipsec-vpn ip xfrm policy
+ip xfrm policy
 podman exec -it ipsec-vpn swanctl --load-all
 podman exec -it ipsec-vpn swanctl --initiate --child paloalto-tunnel
 ```
