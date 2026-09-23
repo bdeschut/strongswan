@@ -15,7 +15,10 @@ ExecStartPre=-/usr/sbin/ip link del ipsec0
 # Create and configure the XFRM interface
 ExecStart=/usr/sbin/ip link add ipsec0 type xfrm if_id 42
 ExecStart=/usr/sbin/ip addr add changeme_VPNIP_SPOKE/30 peer changeme_VPNIP_HUB dev ipsec0
-ExecStart=/usr/sbin/ip link set ipsec0 up
+# physical eth0/wlan0 uplink is 1500
+# An IPsec ESP packet wrapping AES-256-GCM adds 62 to 78 bytes of tunnel overhead
+# Fix: Lower the interface MTU in your systemd interface unit
+ExecStart=/usr/sbin/ip link set ipsec0 mtu 1400 up
 
 # Install remote hub subnets reachable via ipsec0 (adjust subnet to match your Palo Alto networks)
 # ExecStart=-/usr/sbin/ip route replace 10.0.0.0/16 dev ipsec0
