@@ -20,11 +20,12 @@ Volume=/opt/strongswan/swanctl.conf:/etc/swanctl/swanctl.conf:ro,Z
 Volume=/lib/modules:/lib/modules:ro
 
 # Optional healthcheck using the peer tunnel IP
-#HealthCmd=ping -I ipsec0 -c 1 -W 3 changeme_VPNIP_HUB || exit 1
-#HealthInterval=60s
-#HealthRetries=5
-#HealthTimeout=5s
-#HealthOnFailure=restart
+HealthCmd=ping -I ipsec0 -c 1 -W 3 changeme_VPNIP_HUB || exit 1
+HealthInterval=30s
+HealthRetries=3
+HealthTimeout=5s
+HealthStartPeriod=10s
+HealthOnFailure=restart
 
 [Service]
 Restart=always
