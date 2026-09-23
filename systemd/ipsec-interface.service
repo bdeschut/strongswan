@@ -1,16 +1,27 @@
 # /etc/systemd/system/ipsec-interface.service
 [Unit]
-Description=Setup XFRM interface for IPsec VPN
+Description=Setup XFRM interface and routes for IPsec VPN
+After=network-online.target
+Wants=network-online.target
 Before=ipsec.service
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
+
+# Clean up stale devices if any exist
 ExecStartPre=-/usr/sbin/ip link del ipsec0
+
+# Create and configure the XFRM interface
 ExecStart=/usr/sbin/ip link add ipsec0 type xfrm if_id 42
 ExecStart=/usr/sbin/ip addr add changeme_VPNIP_SPOKE/30 peer changeme_VPNIP_HUB dev ipsec0
 ExecStart=/usr/sbin/ip link set ipsec0 up
-ExecStopPost=-/usr/sbin/ip link del ipsec0
+
+# Install remote hub subnets reachable via ipsec0 (adjust subnet to match your Palo Alto networks)
+# ExecStart=-/usr/sbin/ip route replace 10.0.0.0/16 dev ipsec0
+
+# Teardown interface on service stop
+ExecStop=-/usr/sbin/ip link del ipsec0
 
 [Install]
 WantedBy=multi-user.target
