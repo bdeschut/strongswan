@@ -26,6 +26,11 @@ sudo systemctl start ipsec
 
 # Troubleshooting
 ```bash
+# Check healthcheck status:
+podman inspect --format '{{.State.Health.Status}}' ipsec-vpn
+```
+
+```bash
 podman exec -it ipsec-vpn ip xfrm state
 podman exec -it ipsec-vpn ip xfrm policy
 ip xfrm policy
