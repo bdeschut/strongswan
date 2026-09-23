@@ -21,12 +21,11 @@ sudo systemctl enable --now podman-auto-update.timer
 sudo sysctl -w net.ipv4.ip_forward=1
 
 sudo systemctl daemon-reload
+sudo systemctl enable --now ipsec-interface.service
 sudo systemctl start ipsec
-# For now, until next rebuild:
-podman exec -it ipsec-vpn apt-get install -y --no-install-recommends iputils-ping
 
 # Not sure about this one:
-iptables -t mangle -A FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+# iptables -t mangle -A FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
 ```
 
 # Troubleshooting
