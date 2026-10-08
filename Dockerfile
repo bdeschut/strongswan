@@ -25,6 +25,7 @@ RUN curl -sSL https://download.strongswan.org/strongswan-${STRONGSWAN_VERSION}.t
         --enable-swanctl \
         --enable-vici \
         --enable-openssl \
+        --enable-ml \
         --enable-gcm \
         --enable-nonce \
         --enable-random \
