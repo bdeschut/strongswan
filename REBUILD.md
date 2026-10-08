@@ -20,7 +20,7 @@ Run this on your RHEL / x86 server:
 # Common variables
 REGISTRY="ghcr.io/bdeschut"
 IMAGE_NAME="pq-strongswan"
-VERSION="6.1.1-0.16.0"
+VERSION="6.1.1_20260923"
 ARCH=$(podman info --format '{{.Host.Arch}}')
 
 # Make sure you are on the latest git version
@@ -29,7 +29,6 @@ git pull
 # Build the image locally
 podman build \
     --build-arg STRONGSWAN_VERSION=6.1.0 \
-    --build-arg LIBOQS_VERSION=0.16.0 \
     -t pq-strongswan:latest \
     -t pq-strongswan:6.1.0-0.16.0 \
     -f Dockerfile .
@@ -48,7 +47,7 @@ Run this on your Raspberry Pi:
 # Common variables
 REGISTRY="ghcr.io/bdeschut"
 IMAGE_NAME="pq-strongswan"
-VERSION="6.1.1-0.16.0"
+VERSION="6.1.1_20260923"
 ARCH=$(podman info --format '{{.Host.Arch}}')
 
 # Build the image locally

@@ -6,27 +6,30 @@ sudo mkdir /opt/strongswan
 sudo chmod 0700 /opt/strongswan
 sudo vi /opt/strongswan/strongswan.conf # See example config file in this repo (strongswan.conf)
 sudo chmod 0600 /opt/strongswan/strongswan.conf
+sudo vi /opt/strongswan/swanctl.conf # See example config file in this repo (swanctl.conf)
+sudo chmod 0600 /opt/strongswan/swanctl.conf
 sudo vi /etc/containers/systemd/ipsec.container # See example systemd file
+sudo vi /etc/systemd/system/ipsec-interface.service # See example systemd file
 sudo podman pull ghcr.io/bdeschut/pq-strongswan:latest
-
-# Optional, if you want containers to auto update
-sudo systemctl enable --now podman-auto-update.timer
-
-# sudo modprobe af_key xfrm_user xfrm_algo esp4 # First one didn't seem loaded on "clean" system
-# = not needed
 
 sudo sysctl -w net.ipv4.ip_forward=1
 
 sudo systemctl daemon-reload
+# Optional, if you want containers to auto update
+sudo systemctl enable --now podman-auto-update.timer
+sudo systemctl enable --now ipsec-interface.service
 sudo systemctl start ipsec
-# For now, until next rebuild:
-podman exec -it ipsec-vpn apt-get install -y --no-install-recommends iputils-ping
 
 # Not sure about this one:
-iptables -t mangle -A FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+# iptables -t mangle -A FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
 ```
 
 # Troubleshooting
+```bash
+# Check healthcheck status:
+podman inspect --format '{{.State.Health.Status}} (FailingStreak: {{.State.Health.FailingStreak}})' ipsec-vpn
+```
+
 ```bash
 podman exec -it ipsec-vpn ip xfrm state
 podman exec -it ipsec-vpn ip xfrm policy
