@@ -20,9 +20,6 @@ ExecStart=/usr/sbin/ip addr add changeme_VPNIP_SPOKE/30 peer changeme_VPNIP_HUB 
 # Fix: Lower the interface MTU in your systemd interface unit
 ExecStart=/usr/sbin/ip link set ipsec0 mtu 1400 up
 
-# Install remote hub subnets reachable via ipsec0 (adjust subnet to match your Palo Alto networks)
-# ExecStart=-/usr/sbin/ip route replace 10.0.0.0/16 dev ipsec0
-
 # Teardown interface on service stop
 ExecStop=-/usr/sbin/ip link del ipsec0
 
