@@ -1,115 +1,156 @@
-# Multi-Architecture Image Build & Release Guide (Podman + GHCR)
+# Image Rebuild & Release Guide
 
-This guide documents the workflow to build, tag, and publish multi-architecture container images (`linux/amd64` and `linux/arm64`) across separate physical machines (e.g., an x86 server and a Raspberry Pi) to GitHub Container Registry (`ghcr.io`).
-
----
-
-# 1. Overview of the Strategy
-
-1. **Build locally** on each respective machine (x86 server and Raspberry Pi).
-2. **Tag & push** architecture-specific tags (`<version>-amd64` and `<version>-arm64`) to GHCR.
-3. **Assemble a Manifest List** (OCI Image Index) linking both architectures under the main tags (`<version>` and `latest`).
-4. **Push the Manifest List** to GHCR.
+Step-by-step instructions to rebuild and publish multi-architecture container images (`linux/amd64` and `linux/arm64`) using Podman and GitHub Container Registry (`ghcr.io`).
 
 ---
 
-# Phase 1: Build & Push on Server (x86 / amd64)
+## Rebuild Triggers & Pre-Requisites
 
-Run this on your RHEL / x86 server:
+Common reasons to rebuild:
+- **New strongSwan version**: Update `STRONGSWAN_VERSION` and `VERSION` in the variable block.
+- **Modified build flags or plugins**: Update the `./configure` options in [Dockerfile](file:///opt/strongswan/Dockerfile), commit and push the changes, then pull them on both build hosts.
+- **Base image or script updates**: Update packages in [Dockerfile](file:///opt/strongswan/Dockerfile) or logic in [entrypoint.sh](file:///opt/strongswan/entrypoint.sh), commit and push, then pull on both build hosts.
+
+### Registry Authentication (Required on both build hosts)
+Before pushing, ensure Podman is logged in to GHCR with a GitHub Personal Access Token (PAT) having `write:packages` scope:
 ```bash
-# Common variables
+echo "${CR_PAT}" | podman login ghcr.io -u <GITHUB_USERNAME> --password-stdin
+```
+
+---
+
+## Step 1: System 1 (x86_64 / amd64 Host) — Build & Push amd64 Image
+
+Execute these commands in order on the x86_64 / amd64 build host:
+
+```bash
+# Define variables
 REGISTRY="ghcr.io/bdeschut"
 IMAGE_NAME="pq-strongswan"
-VERSION="6.1.1_20260923"
+STRONGSWAN_VERSION="6.1.0"
+VERSION="${STRONGSWAN_VERSION}_$(date +%Y%m%d)"
 ARCH=$(podman info --format '{{.Host.Arch}}')
 
-# Make sure you are on the latest git version
+# 1. Pull latest repository changes
 git pull
 
-# Build the image locally
+# 2. Build local image
 podman build \
-    --build-arg STRONGSWAN_VERSION=6.1.0 \
-    -t pq-strongswan:latest \
-    -t pq-strongswan:6.1.0-0.16.0 \
+    --build-arg STRONGSWAN_VERSION="${STRONGSWAN_VERSION}" \
+    -t "${IMAGE_NAME}:latest" \
+    -t "${IMAGE_NAME}:${VERSION}" \
     -f Dockerfile .
 
-# Tag with the architecture suffix
-podman tag ${IMAGE_NAME}:latest ${REGISTRY}/${IMAGE_NAME}:${VERSION}-${ARCH}
+# 3. Tag image with architecture suffix
+podman tag "${IMAGE_NAME}:${VERSION}" "${REGISTRY}/${IMAGE_NAME}:${VERSION}-${ARCH}"
 
-# Push the arch-specific image to GHCR
-podman push ${REGISTRY}/${IMAGE_NAME}:${VERSION}-${ARCH}
+# 4. Push architecture-specific image to GHCR
+podman push "${REGISTRY}/${IMAGE_NAME}:${VERSION}-${ARCH}"
 ```
 
-# Phase 2: Build & Push on Raspberry Pi (arm64)
+---
 
-Run this on your Raspberry Pi:
+## Step 2: System 2 (ARM64 / Raspberry Pi Host) — Build & Push arm64 Image
+
+Execute these commands in order on the ARM64 / Raspberry Pi build host:
+
 ```bash
-# Common variables
+# Define variables (ensure STRONGSWAN_VERSION and VERSION match Step 1)
 REGISTRY="ghcr.io/bdeschut"
 IMAGE_NAME="pq-strongswan"
-VERSION="6.1.1_20260923"
+STRONGSWAN_VERSION="6.1.0"
+VERSION="${STRONGSWAN_VERSION}_$(date +%Y%m%d)"
 ARCH=$(podman info --format '{{.Host.Arch}}')
 
-# Build the image locally
-podman build -t ${IMAGE_NAME}:latest .
+# 1. Pull latest repository changes
+git pull
 
-# Tag with the architecture suffix
-podman tag ${IMAGE_NAME}:latest ${REGISTRY}/${IMAGE_NAME}:${VERSION}-${ARCH}
+# 2. Build local image
+podman build \
+    --build-arg STRONGSWAN_VERSION="${STRONGSWAN_VERSION}" \
+    -t "${IMAGE_NAME}:latest" \
+    -t "${IMAGE_NAME}:${VERSION}" \
+    -f Dockerfile .
 
-# Push the arch-specific image to GHCR
-podman push ${REGISTRY}/${IMAGE_NAME}:${VERSION}-${ARCH}
+# 3. Tag image with architecture suffix
+podman tag "${IMAGE_NAME}:${VERSION}" "${REGISTRY}/${IMAGE_NAME}:${VERSION}-${ARCH}"
+
+# 4. Push architecture-specific image to GHCR
+podman push "${REGISTRY}/${IMAGE_NAME}:${VERSION}-${ARCH}"
 ```
 
-# Phase 3: Create & Push Multi-Arch Manifests
-You can run this step from either machine (or any workstation authenticated to ghcr.io).
+---
 
-## Versioned Tag (${VERSION})
+## Step 3: Manifest Host (System 1, System 2, or Workstation) — Assemble & Push Multi-Arch Manifests
+
+Execute these commands in order on any machine authenticated to GHCR (System 1, System 2, or your workstation):
+
 ```bash
-# Remove any conflicting local tag if present
-podman rmi ${REGISTRY}/${IMAGE_NAME}:${VERSION} 2>/dev/null || true
+# Define variables
+REGISTRY="ghcr.io/bdeschut"
+IMAGE_NAME="pq-strongswan"
+STRONGSWAN_VERSION="6.1.0"
+VERSION="${STRONGSWAN_VERSION}_$(date +%Y%m%d)"
+LATEST_TAG="latest"
+ARCH_AMD64="amd64"
+ARCH_ARM64="arm64"
 
-# Create the manifest list
-podman manifest create ${REGISTRY}/${IMAGE_NAME}:${VERSION}
+# 1. Create and push versioned manifest list (${VERSION})
+podman rmi "${REGISTRY}/${IMAGE_NAME}:${VERSION}" 2>/dev/null || true
+podman manifest create "${REGISTRY}/${IMAGE_NAME}:${VERSION}"
 
-# Add both architectures from GHCR
-podman manifest add ${REGISTRY}/${IMAGE_NAME}:${VERSION} docker://${REGISTRY}/${IMAGE_NAME}:${VERSION}-amd64
-podman manifest add ${REGISTRY}/${IMAGE_NAME}:${VERSION} docker://${REGISTRY}/${IMAGE_NAME}:${VERSION}-arm64
+for ARCH in "${ARCH_AMD64}" "${ARCH_ARM64}"; do
+    podman manifest add "${REGISTRY}/${IMAGE_NAME}:${VERSION}" "docker://${REGISTRY}/${IMAGE_NAME}:${VERSION}-${ARCH}"
+done
 
-# Push the manifest list to GHCR
-podman manifest push ${REGISTRY}/${IMAGE_NAME}:${VERSION}
+podman manifest push "${REGISTRY}/${IMAGE_NAME}:${VERSION}"
+
+# 2. Create and push 'latest' manifest list (${LATEST_TAG})
+podman rmi "${REGISTRY}/${IMAGE_NAME}:${LATEST_TAG}" 2>/dev/null || true
+podman manifest create "${REGISTRY}/${IMAGE_NAME}:${LATEST_TAG}"
+
+for ARCH in "${ARCH_AMD64}" "${ARCH_ARM64}"; do
+    podman manifest add "${REGISTRY}/${IMAGE_NAME}:${LATEST_TAG}" "docker://${REGISTRY}/${IMAGE_NAME}:${VERSION}-${ARCH}"
+done
+
+podman manifest push "${REGISTRY}/${IMAGE_NAME}:${LATEST_TAG}"
 ```
 
-## Latest Tag
+---
+
+## Step 4: Target System(s) — Verification & Deployment
+
+### 1. Verify Manifest on Registry (Run on any host)
+
+Confirm both architectures are present in the remote manifest index:
+
 ```bash
-# Remove any conflicting local tag if present
-podman rmi ${REGISTRY}/${IMAGE_NAME}:latest 2>/dev/null || true
+REGISTRY="ghcr.io/bdeschut"
+IMAGE_NAME="pq-strongswan"
+STRONGSWAN_VERSION="6.1.0"
+VERSION="${STRONGSWAN_VERSION}_$(date +%Y%m%d)"
 
-# Create the 'latest' manifest list
-podman manifest create ${REGISTRY}/${IMAGE_NAME}:latest
-
-# Add both architectures
-podman manifest add ${REGISTRY}/${IMAGE_NAME}:latest docker://${REGISTRY}/${IMAGE_NAME}:${VERSION}-amd64
-podman manifest add ${REGISTRY}/${IMAGE_NAME}:latest docker://${REGISTRY}/${IMAGE_NAME}:${VERSION}-arm64
-
-# Push the 'latest' manifest list to GHCR
-podman manifest push ${REGISTRY}/${IMAGE_NAME}:latest
+podman manifest inspect "${REGISTRY}/${IMAGE_NAME}:${VERSION}"
 ```
 
-# Verification
+### 2. Pull and Test Architecture (Run on each target machine)
+
+Verify that the local machine downloads its matching native architecture:
+
 ```bash
-podman manifest inspect ${REGISTRY}/${IMAGE_NAME}:${VERSION}
-```
-Verify that manifests contains both amd64 and arm64.
+REGISTRY="ghcr.io/bdeschut"
+IMAGE_NAME="pq-strongswan"
+STRONGSWAN_VERSION="6.1.0"
+VERSION="${STRONGSWAN_VERSION}_$(date +%Y%m%d)"
 
-### Trigger automatic updates manually
+podman pull "${REGISTRY}/${IMAGE_NAME}:${VERSION}"
+podman image inspect "${REGISTRY}/${IMAGE_NAME}:${VERSION}" --format 'Architecture: {{.Architecture}}'
+```
+
+### 3. Deploy Container Update (Run on production host, e.g. Raspberry Pi)
+
+Trigger automatic container update or restart the systemd service:
+
 ```bash
 sudo podman auto-update
 ```
-
-### Manual test Pulling on each machine:
-```bash
-podman pull ${REGISTRY}/${IMAGE_NAME}:${VERSION}
-podman image inspect ${REGISTRY}/${IMAGE_NAME}:${VERSION} --format 'Architecture: {{.Architecture}}'
-```
-
-On the x86 host, it will report Architecture: amd64. On the Raspberry Pi, it will report Architecture: arm64.
