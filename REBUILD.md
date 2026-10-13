@@ -144,6 +144,8 @@ STRONGSWAN_VERSION="6.1.0"
 VERSION="${STRONGSWAN_VERSION}_$(date +%Y%m%d)"
 
 podman pull "${REGISTRY}/${IMAGE_NAME}:${VERSION}"
+Or just:
+podman pull ghcr.io/bdeschut/pq-strongswan:latest
 podman image inspect "${REGISTRY}/${IMAGE_NAME}:${VERSION}" --format 'Architecture: {{.Architecture}}'
 ```
 
